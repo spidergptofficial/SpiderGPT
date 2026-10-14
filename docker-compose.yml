@@ -1,0 +1,12 @@
+# SpiderGPT uses Supabase for PostgreSQL and Auth.
+# Docker is no longer required for local development.
+# This file is intentionally kept only as a deployment convenience for the application containers.
+services:
+  server:
+    build: ./server
+    env_file: ./server/.env
+    ports: ["4000:4000"]
+  web:
+    build: ./web
+    depends_on: [server]
+    ports: ["8080:80"]

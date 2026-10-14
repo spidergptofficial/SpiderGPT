@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {MODES,buildSystemPrompt} from './modes.js';
+test('all six modes exist',()=>assert.deepEqual(Object.keys(MODES),['brain','chill','chaos','roast','create','focus']));
+test('prompt contains spider personalization and mode',()=>{const s=buildSystemPrompt({spider:{name:'Nova',personality:['smart'],style:{length:'short'},behavior:{direct_answers:true},personalization_enabled:true},profile:{name:'Alex'},instructions:'Be concise',mode:'focus',preferences:[{kind:'like',value:'coffee'}]});assert.match(s,/Nova/);assert.match(s,/Alex/);assert.match(s,/coffee/);assert.match(s,/action-oriented/);});

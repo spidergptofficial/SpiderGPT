@@ -1,0 +1,27 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE IF NOT EXISTS users(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), google_sub text UNIQUE NOT NULL, email text UNIQUE NOT NULL, created_at timestamptz DEFAULT now(), deleted_at timestamptz);
+CREATE TABLE IF NOT EXISTS profiles(user_id uuid PRIMARY KEY REFERENCES users ON DELETE CASCADE, name text NOT NULL, age int CHECK(age BETWEEN 13 AND 120), theme text DEFAULT 'dark', updated_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS spiders(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid UNIQUE NOT NULL REFERENCES users ON DELETE CASCADE, name text NOT NULL, personality jsonb NOT NULL DEFAULT '[]', style jsonb NOT NULL DEFAULT '{}', behavior jsonb NOT NULL DEFAULT '{}', personalization_enabled bool DEFAULT true, created_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS spider_preferences(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), spider_id uuid NOT NULL REFERENCES spiders ON DELETE CASCADE, kind text NOT NULL CHECK(kind IN('like','dislike','topic','general')), value text NOT NULL, created_at timestamptz DEFAULT now());
+CREATE INDEX IF NOT EXISTS spider_preferences_spider_idx ON spider_preferences(spider_id, created_at);
+CREATE TABLE IF NOT EXISTS spider_custom_instructions(spider_id uuid PRIMARY KEY REFERENCES spiders ON DELETE CASCADE, body text NOT NULL CHECK(length(body)<=2000), updated_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS conversations(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE, title text, mode text NOT NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());
+CREATE INDEX IF NOT EXISTS conversations_user_updated_idx ON conversations(user_id, updated_at DESC, id DESC);
+CREATE TABLE IF NOT EXISTS messages(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), conversation_id uuid NOT NULL REFERENCES conversations ON DELETE CASCADE, role text NOT NULL CHECK(role IN('user','assistant')), content text NOT NULL, created_at timestamptz DEFAULT now());
+CREATE INDEX IF NOT EXISTS messages_conversation_created_idx ON messages(conversation_id, created_at, id);
+CREATE TABLE IF NOT EXISTS saved_items(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE, message_id uuid REFERENCES messages ON DELETE SET NULL, content text NOT NULL, favorite bool DEFAULT false, created_at timestamptz DEFAULT now());
+CREATE UNIQUE INDEX IF NOT EXISTS saved_user_message_unique ON saved_items(user_id,message_id) WHERE message_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS plans(code text PRIMARY KEY, name text, sort int NOT NULL DEFAULT 0, active bool NOT NULL DEFAULT true, entitlements jsonb NOT NULL, prices jsonb NOT NULL DEFAULT '{}');
+CREATE TABLE IF NOT EXISTS subscriptions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE, plan_code text NOT NULL REFERENCES plans, provider text NOT NULL, provider_sub_id text NOT NULL, status text NOT NULL CHECK(status IN('active','past_due','paused','cancelled','expired')), current_period_end timestamptz, cancel_at_period_end bool DEFAULT false, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), UNIQUE(provider, provider_sub_id));
+CREATE INDEX IF NOT EXISTS subscriptions_user_status_idx ON subscriptions(user_id,status,current_period_end DESC);
+CREATE TABLE IF NOT EXISTS payments(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users, provider text NOT NULL, provider_payment_id text NOT NULL, provider_order_id text, amount int NOT NULL, currency text NOT NULL, status text NOT NULL, plan_code text, billing_period text, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), UNIQUE(provider, provider_payment_id));
+CREATE INDEX IF NOT EXISTS payments_user_created_idx ON payments(user_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS webhook_events(provider text NOT NULL, event_id text NOT NULL, received_at timestamptz DEFAULT now(), PRIMARY KEY(provider,event_id));
+CREATE TABLE IF NOT EXISTS usage(user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE, day date NOT NULL, kind text NOT NULL, count int NOT NULL DEFAULT 0, PRIMARY KEY(user_id, day, kind));
+CREATE TABLE IF NOT EXISTS refresh_tokens(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users ON DELETE CASCADE, token_hash text UNIQUE NOT NULL, expires_at timestamptz NOT NULL, revoked_at timestamptz, created_at timestamptz DEFAULT now());
+CREATE INDEX IF NOT EXISTS refresh_tokens_user_idx ON refresh_tokens(user_id);
+INSERT INTO plans(code,name,sort,active,entitlements) VALUES
+('free','Free',0,true,'{"responses_per_day":30,"modes":["brain","chill","focus"],"name_changes_per_month":1,"appearance_changes_per_month":2,"custom_appearance_allowed":false,"images_per_day":3}'),
+('pro','Pro',1,true,'{"responses_per_day":150,"modes":["brain","chill","chaos","create","focus"],"name_changes_per_month":5,"appearance_changes_per_month":10,"custom_appearance_allowed":true,"images_per_day":15}'),
+('plus','Plus',2,true,'{"responses_per_day":null,"modes":["brain","chill","chaos","roast","create","focus"],"name_changes_per_month":null,"appearance_changes_per_month":null,"custom_appearance_allowed":true,"images_per_day":35}')
+ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name,sort=EXCLUDED.sort,entitlements=EXCLUDED.entitlements;

@@ -1,0 +1,2 @@
+import {useCallback,useState} from 'react';import {Outlet} from 'react-router-dom';import {Menu} from 'lucide-react';import Sidebar from './Sidebar.jsx';
+export default function AppShell(){const[open,setOpen]=useState(false);const close=useCallback(()=>setOpen(false),[]);return <div className="shell"><header className="mobile-top"><button className="icon-btn" onClick={()=>setOpen(true)} aria-label="Open menu"><Menu/></button><img src="/brand/wordmark.png" alt="SpiderGPT"/></header><Sidebar open={open} onClose={close}/><main className="main"><Outlet/></main></div>;}

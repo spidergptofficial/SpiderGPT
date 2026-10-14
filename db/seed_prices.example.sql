@@ -1,0 +1,4 @@
+-- TEMPLATE: copy, fill in your real amounts (minor units), then run against your database.
+-- UPDATE plans SET prices = '{"INR":{"monthly":AMOUNT,"yearly":AMOUNT},"USD":{"monthly":AMOUNT,"yearly":AMOUNT}}' WHERE code='pro';
+-- UPDATE plans SET prices = '{"INR":{"monthly":AMOUNT,"yearly":AMOUNT},"USD":{"monthly":AMOUNT,"yearly":AMOUNT}}' WHERE code='plus';
+-- Omit a currency or period to hide it from the pricing page. Free needs no price.
